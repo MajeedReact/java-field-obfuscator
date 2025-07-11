@@ -5,37 +5,42 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Field;
+import java.util.Arrays;
+import java.util.List;
 
 public class CommonUtils {
 
-   public static final Logger logger = LoggerFactory.getLogger(CommonUtils.class);
+    public static final Logger logger = LoggerFactory.getLogger(CommonUtils.class);
 
     /**
      * This method takes a field of type String and obfuscates its value based on the length specified in the Obfuscate annotation.
-     * @param fieldType field type
-     * @param field field itself
-     * @param instance instance of the class containing the field
      * @return obfuscated value of the field
      * @throws IllegalAccessException
      */
-    public static String obfuscateValues(Class<?> fieldType, Field field, Object instance) throws IllegalAccessException {
-        if(!fieldType.equals(String.class))
-            throw new RuntimeException("Only String classes supported");
+    public static void obfuscateValues(Object user) throws IllegalAccessException {
+        //Filter out sensitive fields to be obfuscated
+        List<Field> sensitiveFields = Arrays.stream(user.getClass().getDeclaredFields())
+                .filter(field -> field.isAnnotationPresent(Obfuscate.class)).toList();
 
-        field.setAccessible(true);
-        String value = (String) field.get(instance);
-        int lengthOfObfuscation = field.getAnnotation(Obfuscate.class).obfuscateLength();
+        for (Field field : sensitiveFields) {
+            if (!field.getType().equals(String.class))
+                throw new RuntimeException("Only String classes supported");
 
-        if(value == null || value.length() <= lengthOfObfuscation)
-            return value;
+            field.setAccessible(true);
+            String value = (String) field.get(user);
+            int lengthOfObfuscation = field.getAnnotation(Obfuscate.class).obfuscateLength();
 
-        StringBuilder obfuscatedValue = new StringBuilder();
-        for(int i=0; i < value.length()-lengthOfObfuscation; i++){
-            obfuscatedValue.append("*");
+            if (value == null || value.length() <= lengthOfObfuscation)
+                continue;
+
+            StringBuilder obfuscatedValue = new StringBuilder();
+            for (int i = 0; i < value.length() - lengthOfObfuscation; i++) {
+                obfuscatedValue.append("*");
+            }
+
+            obfuscatedValue.append(value.substring(obfuscatedValue.length()));
+
+            field.set(user, obfuscatedValue.toString());
         }
-
-        obfuscatedValue.append(value.substring(obfuscatedValue.length()));
-
-        return obfuscatedValue.toString();
     }
 }

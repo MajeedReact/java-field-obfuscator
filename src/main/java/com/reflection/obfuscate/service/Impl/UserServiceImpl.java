@@ -17,6 +17,7 @@ import java.util.List;
 public class UserServiceImpl implements UserService {
 
     public static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
+
     @Override
     public UserDTO getUserDetails() {
         UserDTO user = UserDTO.builder()
@@ -26,16 +27,10 @@ public class UserServiceImpl implements UserService {
                 .createdDate(LocalDateTime.now())
                 .build();
 
-        //Filter out sensitive fields to be obfuscated
-        List<Field> sensitiveFields = Arrays.stream(user.getClass().getDeclaredFields())
-                .filter(field -> field.isAnnotationPresent(Obfuscate.class)).toList();
-
-        for(Field field : sensitiveFields){
-            try {
-                field.set(user, CommonUtils.obfuscateValues(field.getType(), field, user));
-            } catch (IllegalAccessException e) {
-                logger.error("Cannot access fields value for the field name: {}", field.getName());
-            }
+        try {
+            CommonUtils.obfuscateValues(user);
+        } catch (IllegalAccessException e) {
+            logger.error(e.getMessage());
         }
 
         return user;
