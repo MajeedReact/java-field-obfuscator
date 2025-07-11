@@ -13,13 +13,12 @@ public class CommonUtils {
     public static final Logger logger = LoggerFactory.getLogger(CommonUtils.class);
 
     /**
-     * This method takes a field of type String and obfuscates its value based on the length specified in the Obfuscate annotation.
-     * @return obfuscated value of the field
+     * This method takes object instance, identifies all the fields annotated with @Obfuscate then obfuscates its values based on the length specified in the Obfuscate annotation.
      * @throws IllegalAccessException
      */
-    public static void obfuscateValues(Object user) throws IllegalAccessException {
+    public static void obfuscateValues(Object instance) throws IllegalAccessException {
         //Filter out sensitive fields to be obfuscated
-        List<Field> sensitiveFields = Arrays.stream(user.getClass().getDeclaredFields())
+        List<Field> sensitiveFields = Arrays.stream(instance.getClass().getDeclaredFields())
                 .filter(field -> field.isAnnotationPresent(Obfuscate.class)).toList();
 
         for (Field field : sensitiveFields) {
@@ -27,7 +26,7 @@ public class CommonUtils {
                 throw new RuntimeException("Only String classes supported");
 
             field.setAccessible(true);
-            String value = (String) field.get(user);
+            String value = (String) field.get(instance);
             int lengthOfObfuscation = field.getAnnotation(Obfuscate.class).obfuscateLength();
 
             if (value == null || value.length() <= lengthOfObfuscation)
@@ -40,7 +39,8 @@ public class CommonUtils {
 
             obfuscatedValue.append(value.substring(obfuscatedValue.length()));
 
-            field.set(user, obfuscatedValue.toString());
+            //Set back the obfuscated value to the object instance
+            field.set(instance, obfuscatedValue.toString());
         }
     }
 }
